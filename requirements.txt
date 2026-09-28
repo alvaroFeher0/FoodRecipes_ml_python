@@ -1,0 +1,8 @@
+ipykernel
+numpy
+pandas
+pillow
+pytesseract
+easyocr
+ollama
+streamlit
