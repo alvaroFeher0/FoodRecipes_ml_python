@@ -27,13 +27,16 @@ def extract_ingredients(file):
         "(e.g. 'ACTE.OLIVA V.EXTRA F' -> 'extra virgin olive oil', 'GALLETAS ENERGY' -> 'cookies', "
         "'PAN MASA MADRE' -> 'sourdough bread', 'MAIZ' -> 'corn'). "
         "Skip header/footer lines (store info, totals, taxes, payment, dates). "
-        "Use null for products that are not food (cleaning, toiletries, bags).\n\n"
-        'Reply with JSON: {"items": [{"line": "<product text as printed>", "ingredient": "<ingredient or null>"}]}'
+        "Use null for products that are not food (cleaning, toiletries, bags). "
+        "For price, give the line total in euros as a number with a dot decimal "
+        "(e.g. '2 x 1,25  2,50' -> 2.5), or null if it is unreadable.\n\n"
+        'Reply with JSON: {"items": [{"line": "<product text as printed>", '
+        '"ingredient": "<ingredient or null>", "price": <number or null>}]}'
     )
     content = [
         {"type": "text", "text": prompt},
         {"type": "image_url", "image_url": {"url": encode_image(file)}},
     ]
-    return pd.DataFrame(call_model(content)["items"], columns=["line", "ingredient"])
+    return pd.DataFrame(call_model(content)["items"], columns=["line", "ingredient", "price"])
 
 
