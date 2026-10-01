@@ -1,0 +1,2 @@
+GROQ_API_KEY=gsk_real_key
+LLM_BACKEND=groq
