@@ -2,7 +2,6 @@ ipykernel
 numpy
 pandas
 pillow
-pytesseract
-easyocr
-ollama
+openai
+python-dotenv
 streamlit
