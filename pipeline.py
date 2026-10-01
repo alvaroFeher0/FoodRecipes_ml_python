@@ -121,8 +121,8 @@ def generate_recipes(ingredients, n=3):
     return json.loads(response.message.content)["recipes"]
 
 
-def pipeline():
-    lines = read_receipt("receipts/receipt1.jpeg", load_reader())
+def pipeline(file):
+    lines = read_receipt(file, load_reader()) #"receipts/receipt1.jpeg"
     mapping = extract_ingredients(clean_lines(lines))
     ingredients = sorted(mapping["ingredient"].dropna().str.lower().unique())
     print(ingredients)
