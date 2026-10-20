@@ -1,7 +1,7 @@
 import pandas as pd
-from persistence import hash_image, load_receipt, save_receipt
-from receipt_reader import extract_ingredients
-from recepies_generator import generate_recipes
+from foodml.data.persistence import hash_image, load_receipt, save_receipt
+from foodml.models.receipt_reader import extract_ingredients
+from foodml.models.recipe_generator import generate_recipes
 
 def pipeline(file):
     image_hash = hash_image(file)
@@ -10,7 +10,7 @@ def pipeline(file):
         print("Receipt already processed, loaded from the database")
         return saved
 
-    mapping = extract_ingredients(file)  # "receipts/receipt1.jpeg"
+    mapping = extract_ingredients(file)  # "data/raw/receipt1.jpeg"
     mapping["ingredient"] = mapping["ingredient"].str.lower()
     mapping["price"] = pd.to_numeric(mapping["price"], errors="coerce")
     # same ingredient on several lines (e.g. two kinds of tomatoes) -> add their prices up

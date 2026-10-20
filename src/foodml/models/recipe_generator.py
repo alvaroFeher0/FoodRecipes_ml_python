@@ -1,4 +1,4 @@
-from llm import call_model
+from foodml.models.llm import call_model
 
 def generate_recipes(prices, n=3):
     """Ask the model for n recipes that mainly use the bought ingredients and estimate each one's cost.

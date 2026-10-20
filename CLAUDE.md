@@ -13,30 +13,35 @@ Personal learning project: favour clear, readable code over abstraction, and exp
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+pip install -e .             # installs src/foodml as an importable package
 cp env_example .env          # then set GROQ_API_KEY
-streamlit run app.py         # main entry point
+streamlit run src/foodml/app/app.py   # main entry point
 ```
 
-There is no test suite or linter configured yet. `receipts/receipt1.jpeg` is the sample receipt for manual testing.
+There is no test suite or linter configured yet. `data/raw/receipt1.jpeg` is the sample receipt for manual testing.
+
+## Layout
+
+cookiecutter-data-science style. Code lives in the `src/foodml/` package and uses absolute imports (`from foodml.models.llm import call_model`). Top-level `data/` (raw/interim/processed), `notebooks/`, `configs/`, `models/` (trained weights, not code), `reports/` and `tests/` are placeholders for the ML roadmap below. `features/` and `evaluation/` in the package are empty for now. `.env` and `foodml.db` stay at the repo root: `llm.py` and `persistence.py` resolve them relative to their own location.
 
 ## Architecture
 
-Data flows strictly left to right:
+Data flows strictly left to right (paths relative to `src/foodml/`):
 
 ```
-app.py (UI) → pipeline.py → receipt_reader.py → llm.py
-                          → recepies_generator.py → llm.py
-                          → persistence.py (SQLite: foodml.db)
+app/app.py (UI) → pipelines/receipt_pipeline.py → models/receipt_reader.py → models/llm.py
+                                                → models/recipe_generator.py → models/llm.py
+                                                → data/persistence.py (SQLite: foodml.db)
 ```
 
 | File | Role |
 |---|---|
-| `app.py` | Streamlit UI: upload, show extracted ingredients + recipes, browse saved receipts. No business logic. |
-| `pipeline.py` | Orchestrator. Hash image → return cached result if seen → extract → normalise (lowercase, numeric prices, sum duplicate ingredients) → generate recipes → save. Returns `(ingredients, recipes)`. |
-| `receipt_reader.py` | Resizes/rotates the photo (EXIF, max 2000px, JPEG q85) and sends it as a base64 data URL with the extraction prompt. Returns a DataFrame. |
-| `recepies_generator.py` | Prompts for `n` recipes with per-ingredient package `fraction`s, then `add_cost()` computes cost locally (price × fraction, capped at 1 package). Filename typo is intentional legacy — don't rename without updating imports. |
-| `llm.py` | Single `call_model(content)` helper: Groq via the OpenAI SDK (`base_url=https://api.groq.com/openai/v1`), JSON mode, `temperature=0`, strips `<think>` blocks, slices to the outermost `{...}`. |
-| `persistence.py` | SQLite schema (`receipts`, `items`, `recipes`), `connect()` context manager with lightweight in-place migrations, `hash_image`, `save_receipt`, `load_receipt`, `list_receipts`. |
+| `app/app.py` | Streamlit UI: upload, show extracted ingredients + recipes, browse saved receipts. No business logic. |
+| `pipelines/receipt_pipeline.py` | Orchestrator. Hash image → return cached result if seen → extract → normalise (lowercase, numeric prices, sum duplicate ingredients) → generate recipes → save. Returns `(ingredients, recipes)`. |
+| `models/receipt_reader.py` | Resizes/rotates the photo (EXIF, max 2000px, JPEG q85) and sends it as a base64 data URL with the extraction prompt. Returns a DataFrame. |
+| `models/recipe_generator.py` | Prompts for `n` recipes with per-ingredient package `fraction`s, then `add_cost()` computes cost locally (price × fraction, capped at 1 package). |
+| `models/llm.py` | Single `call_model(content)` helper: Groq via the OpenAI SDK (`base_url=https://api.groq.com/openai/v1`), JSON mode, `temperature=0`, strips `<think>` blocks, slices to the outermost `{...}`. |
+| `data/persistence.py` | SQLite schema (`receipts`, `items`, `recipes`), `connect()` context manager with lightweight in-place migrations, `hash_image`, `save_receipt`, `load_receipt`, `list_receipts`. |
 
 ### Data contracts
 
@@ -46,7 +51,7 @@ app.py (UI) → pipeline.py → receipt_reader.py → llm.py
 
 ## Conventions
 
-- All LLM calls go through `llm.call_model`. Don't instantiate new clients elsewhere; switching provider/model should only touch `llm.py` and `.env` (`GROQ_API_KEY`, optional `GROQ_MODEL`).
+- All LLM calls go through `foodml.models.llm.call_model`. Don't instantiate new clients elsewhere; switching provider/model should only touch `models/llm.py` and `.env` (`GROQ_API_KEY`, optional `GROQ_MODEL`).
 - Prompts ask for JSON and say the exact schema inline. When changing a prompt, update the consumer code and the contracts above together.
 - Do arithmetic (costs, sums) in Python, not in the LLM.
 - Schema changes: add them in `connect()` as idempotent checks (see the `approx_cost` migration) — existing `foodml.db` files must keep working.
@@ -55,11 +60,11 @@ app.py (UI) → pipeline.py → receipt_reader.py → llm.py
 
 ## Known issues (as of the latest commit)
 
-1. **Price column is dropped.** `receipt_reader.extract_ingredients` builds the DataFrame with `columns=["line", "ingredient"]`, so `price` is discarded and `pipeline.py` raises `KeyError: 'price'` for any new receipt. Fix: add `"price"` to `columns`.
+1. **Price column is dropped.** `models/receipt_reader.extract_ingredients` builds the DataFrame with `columns=["line", "ingredient"]`, so `price` is discarded and `receipt_pipeline.py` raises `KeyError: 'price'` for any new receipt. Fix: add `"price"` to `columns`.
 2. Prices and `uses` aren't persisted, so reloaded receipts show the total cost but no per-ingredient breakdown. Fix needs new columns (`items.price`, a JSON `recipes.uses`) via the migration pattern above.
-3. `receipt_reader.py` has unused imports (`json`, `os`, `re`, `dotenv`, `OpenAI`).
+3. `models/receipt_reader.py` has unused imports (`json`, `os`, `re`, `dotenv`, `OpenAI`).
 4. `__pycache__/` and `.DS_Store` files are committed despite `.gitignore`; remove them with `git rm --cached`.
-5. Debug `print`s in `pipeline.py` — fine for now, move to `logging` if they get noisy.
+5. Debug `print`s in `pipelines/receipt_pipeline.py` — fine for now, move to `logging` if they get noisy.
 
 ## Roadmap / ideas under consideration
 
@@ -71,4 +76,4 @@ Context for design decisions — don't build these unprompted:
 - **Fine-tuning** a model on free cookbooks and recipe datasets to generate recipes from inventory — a full pipeline (data prep → training → eval), possibly BERT-based where it fits (e.g. ingredient normalisation/classification).
 - Earlier versions used local Ollama + EasyOCR; the current vision-LLM approach replaced that.
 
-When implementing any of these, keep `pipeline.py` as the single orchestrator and add new stages as separate modules.
+When implementing any of these, keep `pipelines/receipt_pipeline.py` as the single orchestrator (new flows go in `pipelines/`) and add new stages as separate modules in the matching package folder.

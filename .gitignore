@@ -3,3 +3,10 @@
 __pycache__/
 .DS_Store
 foodml.db
+*.egg-info/
+
+# datasets and trained models stay out of git (the sample receipt in data/raw is the exception)
+data/interim/*
+data/processed/*
+models/*
+!.gitkeep

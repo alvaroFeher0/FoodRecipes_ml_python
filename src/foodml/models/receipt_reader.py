@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from PIL import Image, ImageOps
 
-from llm import call_model
+from foodml.models.llm import call_model
 
 
 def encode_image(file):

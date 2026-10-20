@@ -1,8 +1,8 @@
 from datetime import datetime
 
 import streamlit as st
-from persistence import list_receipts, load_receipt
-from pipeline import pipeline
+from foodml.data.persistence import list_receipts, load_receipt
+from foodml.pipelines.receipt_pipeline import pipeline
 
 
 def show_recipe(recipe):

@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "foodml.db"
+DB_PATH = Path(__file__).parents[3] / "foodml.db"  # repo root
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS receipts (

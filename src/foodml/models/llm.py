@@ -4,7 +4,7 @@ import re
 from dotenv import load_dotenv
 from openai import OpenAI
 
-load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".env"))  # repo root
 
 MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
 
